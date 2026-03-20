@@ -1,9 +1,11 @@
-opencv-python>=4.8.0
+# Use headless OpenCV for Linux Servers (Render.com) to avoid libGL missing errors
+opencv-python-headless>=4.8.0
 numpy
+# Download CPU-only PyTorch to save massive space on Render
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 torchvision
 ultralytics
-deepface
 gdown
 fastapi
 uvicorn
