@@ -116,9 +116,9 @@ async def verify_face(
                 sim = cosine_similarity(v1, enrolled_face_mean)
                 f_log.write(f"Similarity Score: {sim:.4f}\n")
                 
-                # Set threshold to 0.50 (adjusted from 0.60) 
+                # Set threshold to 0.35 (adjusted from 0.50) 
                 # to tolerate the difference between a high-res phone photo and a low-res webcam image
-                is_match = sim > 0.50
+                is_match = sim > 0.35
                 f_log.write(f"Match: {is_match}\n")
                 
                 return {
@@ -133,6 +133,67 @@ async def verify_face(
         except Exception as e:
             f_log.write(f"Exception: {str(e)}\n")
             return {"match": False, "score": 0.0, "message": f"Error processing image: {str(e)}"}
+        finally:
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except:
+                    pass
+
+
+@app.post("/api/enroll")
+async def enroll_face(
+    user_id: str = Form(...),
+    file: UploadFile = File(...)
+):
+    with open(os.path.join(PROJECT_ROOT, "api_debug.log"), "a", encoding="utf-8") as f_log:
+        f_log.write(f"\n--- Incoming Enrollment Request: user_id={user_id} ---\n")
+        
+        contents = await file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        if img is None:
+            f_log.write("Enrollment Error: Failed to decode image\n")
+            return {"success": False, "message": "Failed to decode image"}
+        
+        temp_path = os.path.join(PROJECT_ROOT, f"temp_enroll_{user_id}.jpg")
+        try:
+            cv2.imwrite(temp_path, img)
+            f_log.write(f"Saved temp enroll image: {temp_path}\n")
+            
+            # Extract face embedding using DeepFace VGG-Face with ssd detector
+            try:
+                emb_res = DeepFace.represent(img_path=temp_path, model_name="VGG-Face", enforce_detection=True, detector_backend="ssd")
+            except ValueError as ve:
+                if "could not be detected" in str(ve).lower() or "face" in str(ve).lower():
+                    f_log.write("Enrollment Error: No face detected in the image by ssd\n")
+                    return {"success": False, "message": "No face detected. Please position your face clearly in front of the camera."}
+                raise ve
+            
+            if emb_res and len(emb_res) > 0:
+                embedding = emb_res[0]["embedding"]
+                
+                # Save to user_db dictionary
+                user_db[user_id] = {
+                    'face_embeddings': [embedding],
+                    'face_mean': np.array(embedding, dtype=np.float32),
+                    'gait_features': None
+                }
+                
+                # Write database back to file
+                with open(DB_PATH, "wb") as f:
+                    pickle.dump(user_db, f)
+                
+                f_log.write(f"Enrollment Success: Registered face for user_id={user_id}\n")
+                return {"success": True, "message": f"Successfully enrolled face for student ID {user_id}"}
+            else:
+                f_log.write("Enrollment Error: No face detected in the image\n")
+                return {"success": False, "message": "No face detected in the image"}
+                
+        except Exception as e:
+            f_log.write(f"Enrollment Exception: {str(e)}\n")
+            return {"success": False, "message": f"Error enrolling face: {str(e)}"}
         finally:
             if os.path.exists(temp_path):
                 try:
