@@ -6,6 +6,12 @@ import cv2
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
+try:
+    import gdown
+    GDOWN_AVAILABLE = True
+except ImportError:
+    GDOWN_AVAILABLE = False
+    print("Warning: gdown not installed. Cloud auto-download disabled.")
 
 # Add src to sys.path to resolve internal modules
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -19,9 +25,13 @@ from deepface import DeepFace
 app = FastAPI(title="Gait & Face Auth API")
 
 # Setup CORS to allow React frontend to connect
+# Reads allowed origins from ALLOWED_ORIGINS env var (comma-separated), default allows all
+_allowed_origins_env = os.environ.get("ALLOWED_ORIGINS", "*")
+ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",")] if _allowed_origins_env != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust in production
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,13 +44,40 @@ DB_PATH = os.path.join(PROJECT_ROOT, "database", "embeddings.pkl")
 # Initialize FaceRecognizer
 face_rec = FaceRecognizer(model_name="VGG-Face")
 
-# Load User DB
+def download_embeddings_if_needed():
+    """Download embeddings.pkl from Google Drive if running on cloud and file not present."""
+    if os.path.exists(DB_PATH):
+        print(f"✅ Database found at {DB_PATH}")
+        return
+
+    gdrive_id = os.environ.get("EMBEDDINGS_GDRIVE_ID", "")
+    if not gdrive_id:
+        print("⚠️  Warning: Database not found and EMBEDDINGS_GDRIVE_ID env var not set.")
+        return
+
+    if not GDOWN_AVAILABLE:
+        print("⚠️  Warning: gdown not installed. Cannot download embeddings from Google Drive.")
+        return
+
+    print(f"☁️  Downloading embeddings.pkl from Google Drive (id: {gdrive_id})...")
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    url = f"https://drive.google.com/uc?id={gdrive_id}"
+    gdown.download(url, DB_PATH, quiet=False)
+    if os.path.exists(DB_PATH):
+        print("✅ embeddings.pkl downloaded successfully!")
+    else:
+        print("❌ Failed to download embeddings.pkl from Google Drive.")
+
+# Load User DB (download from GDrive on Cloud if needed)
+download_embeddings_if_needed()
+
 user_db = {}
 if os.path.exists(DB_PATH):
     with open(DB_PATH, "rb") as f:
         user_db = pickle.load(f)
+    print(f"✅ Loaded {len(user_db)} users from database.")
 else:
-    print(f"Warning: Database not found at {DB_PATH}")
+    print(f"⚠️  Warning: Database not found at {DB_PATH}. Face verification will fail.")
 
 def cosine_similarity(v1, v2):
     if v1 is None or v2 is None:
