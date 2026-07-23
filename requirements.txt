@@ -1,14 +1,24 @@
-# Use headless OpenCV for Linux Servers (Render.com) to avoid libGL missing errors
+# ============================================================
+# Cloud-optimized requirements for Face AI API (Render.com)
+# ============================================================
+# NOTE: torch / torchvision / ultralytics are for the gait module
+#       and are NOT used by the API — removed to avoid conflicts
+#       and to make build much faster (~5 min instead of 20 min)
+# ============================================================
+
+# OpenCV headless — avoids "libGL" missing error on Linux servers
 opencv-python-headless>=4.8.0
+
 numpy
-# Download CPU-only PyTorch to save massive space on Render
---extra-index-url https://download.pytorch.org/whl/cpu
-torch
-torchvision
-ultralytics
-gdown
 fastapi
-uvicorn
+uvicorn[standard]
 python-multipart
+gdown
+
+# TensorFlow CPU-only (no GPU needed on server, much smaller download)
+# tensorflow-cpu 2.15+ supports Python 3.11
+tensorflow-cpu>=2.15.0,<2.17.0
 tf-keras
-deepface
+
+# DeepFace — pin to tested version
+deepface==0.0.99
