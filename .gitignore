@@ -143,8 +143,8 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# Data files
-*.pkl
+# Data files — embeddings.pkl is committed directly (424KB, safe for GitHub)
+# *.pkl  <-- intentionally NOT ignored so embeddings.pkl is tracked
 *.h5
 *.weights
 *.pt

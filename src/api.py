@@ -45,18 +45,22 @@ DB_PATH = os.path.join(PROJECT_ROOT, "database", "embeddings.pkl")
 face_rec = FaceRecognizer(model_name="VGG-Face")
 
 def download_embeddings_if_needed():
-    """Download embeddings.pkl from Google Drive if running on cloud and file not present."""
+    """
+    Download embeddings.pkl from Google Drive if not present.
+    Normally this file is committed to git directly (424KB).
+    This fallback is for environments where the file is missing.
+    """
     if os.path.exists(DB_PATH):
         print(f"✅ Database found at {DB_PATH}")
         return
 
     gdrive_id = os.environ.get("EMBEDDINGS_GDRIVE_ID", "")
     if not gdrive_id:
-        print("⚠️  Warning: Database not found and EMBEDDINGS_GDRIVE_ID env var not set.")
+        print("⚠️  Warning: Database not found. Set EMBEDDINGS_GDRIVE_ID env var to download it.")
         return
 
     if not GDOWN_AVAILABLE:
-        print("⚠️  Warning: gdown not installed. Cannot download embeddings from Google Drive.")
+        print("⚠️  Warning: gdown not installed. Cannot auto-download embeddings.")
         return
 
     print(f"☁️  Downloading embeddings.pkl from Google Drive (id: {gdrive_id})...")
@@ -66,7 +70,7 @@ def download_embeddings_if_needed():
     if os.path.exists(DB_PATH):
         print("✅ embeddings.pkl downloaded successfully!")
     else:
-        print("❌ Failed to download embeddings.pkl from Google Drive.")
+        print("❌ Failed to download embeddings.pkl.")
 
 # Load User DB (download from GDrive on Cloud if needed)
 download_embeddings_if_needed()
