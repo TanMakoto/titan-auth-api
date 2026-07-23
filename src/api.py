@@ -6,6 +6,10 @@ import cv2
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
+
+# Force UTF-8 output encoding for cross-platform compatibility (Windows CMD / Linux cloud)
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 try:
     import gdown
     GDOWN_AVAILABLE = True
@@ -51,26 +55,26 @@ def download_embeddings_if_needed():
     This fallback is for environments where the file is missing.
     """
     if os.path.exists(DB_PATH):
-        print(f"✅ Database found at {DB_PATH}")
+        print(f"[OK] Database found at {DB_PATH}")
         return
 
     gdrive_id = os.environ.get("EMBEDDINGS_GDRIVE_ID", "")
     if not gdrive_id:
-        print("⚠️  Warning: Database not found. Set EMBEDDINGS_GDRIVE_ID env var to download it.")
+        print("[WARN] Database not found. Set EMBEDDINGS_GDRIVE_ID env var to download it.")
         return
 
     if not GDOWN_AVAILABLE:
-        print("⚠️  Warning: gdown not installed. Cannot auto-download embeddings.")
+        print("[WARN] gdown not installed. Cannot auto-download embeddings.")
         return
 
-    print(f"☁️  Downloading embeddings.pkl from Google Drive (id: {gdrive_id})...")
+    print(f"[INFO] Downloading embeddings.pkl from Google Drive (id: {gdrive_id})...")
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     url = f"https://drive.google.com/uc?id={gdrive_id}"
     gdown.download(url, DB_PATH, quiet=False)
     if os.path.exists(DB_PATH):
-        print("✅ embeddings.pkl downloaded successfully!")
+        print("[OK] embeddings.pkl downloaded successfully!")
     else:
-        print("❌ Failed to download embeddings.pkl.")
+        print("[ERROR] Failed to download embeddings.pkl.")
 
 # Load User DB (download from GDrive on Cloud if needed)
 download_embeddings_if_needed()
@@ -79,9 +83,9 @@ user_db = {}
 if os.path.exists(DB_PATH):
     with open(DB_PATH, "rb") as f:
         user_db = pickle.load(f)
-    print(f"✅ Loaded {len(user_db)} users from database.")
+    print(f"[OK] Loaded {len(user_db)} users from database.")
 else:
-    print(f"⚠️  Warning: Database not found at {DB_PATH}. Face verification will fail.")
+    print(f"[WARN] Database not found at {DB_PATH}. Face verification will fail.")
 
 def cosine_similarity(v1, v2):
     if v1 is None or v2 is None:
