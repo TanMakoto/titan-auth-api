@@ -1,12 +1,9 @@
 # ============================================================
-# Cloud-optimized requirements for Face AI API (Render.com)
-# ============================================================
-# NOTE: torch / torchvision / ultralytics are for the gait module
-#       and are NOT used by the API — removed to avoid conflicts
-#       and to make build much faster (~5 min instead of 20 min)
+# Cloud requirements for Face AI API (Render.com)
+# Python 3.11.9 required — see runtime.txt
 # ============================================================
 
-# OpenCV headless — avoids "libGL" missing error on Linux servers
+# OpenCV headless — avoids "libGL" missing error on Linux
 opencv-python-headless>=4.8.0
 
 numpy
@@ -15,10 +12,9 @@ uvicorn[standard]
 python-multipart
 gdown
 
-# TensorFlow CPU-only (no GPU needed on server, much smaller download)
-# tensorflow-cpu 2.15+ supports Python 3.11
-tensorflow-cpu>=2.15.0,<2.17.0
+# TensorFlow CPU-only for Python 3.11 (no GPU needed)
+tensorflow-cpu>=2.15.0
 tf-keras
 
-# DeepFace — pin to tested version
+# DeepFace — pinned to tested version
 deepface==0.0.99

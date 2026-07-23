@@ -3,12 +3,10 @@ services:
     name: titan-auth-api
     env: python
     plan: free
-    region: singapore  # ใกล้ประเทศไทยที่สุด
+    region: singapore
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn src.api:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.12.7
-      - key: EMBEDDINGS_GDRIVE_ID
-        sync: false  # ต้องใส่ค่าเองใน Render Dashboard
+        value: 3.11.9
     healthCheckPath: /
